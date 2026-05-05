@@ -75,7 +75,16 @@
               <input type="checkbox" id="adm-prod-only-active" checked>
               Active only
             </label>
+            <select id="adm-prod-pagesize" class="adm-input adm-input--inline" title="Products per page">
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="250">250</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
+              <option value="all">All</option>
+            </select>
           </div>
+          <div id="adm-prod-bulkbar" class="adm-bulkbar adm-hidden"></div>
           <div id="adm-prod-list"></div>
           <div id="adm-prod-pagination" class="adm-pagination"></div>
         </div>

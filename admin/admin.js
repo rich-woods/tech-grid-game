@@ -16,7 +16,12 @@
   let categories = [];     // active-only, used by puzzle editor selects
   let productCounts = {};  // category_id -> count
 
-  const prodState = { search: '', kind: '', onlyActive: true, page: 0, total: 0, initialized: false };
+  const prodState = {
+    search: '', kind: '', onlyActive: true,
+    page: 0, total: 0, pageSize: 50, initialized: false,
+    selected: new Set(),       // ids of currently-selected products
+    lastVisibleIds: []         // ids on the page currently displayed
+  };
   const catState  = { initialized: false };
   const modalState = { onSave: null, onDelete: null };
 
@@ -432,30 +437,46 @@
       timer = setTimeout(() => {
         prodState.search = $('#adm-prod-search').value.trim();
         prodState.page = 0;
+        clearSelection();
         loadProducts();
       }, 250);
     });
     $('#adm-prod-kind').addEventListener('change', () => {
       prodState.kind = $('#adm-prod-kind').value;
       prodState.page = 0;
+      clearSelection();
       loadProducts();
     });
     $('#adm-prod-only-active').addEventListener('change', () => {
       prodState.onlyActive = $('#adm-prod-only-active').checked;
       prodState.page = 0;
+      clearSelection();
+      loadProducts();
+    });
+    $('#adm-prod-pagesize').addEventListener('change', () => {
+      const v = $('#adm-prod-pagesize').value;
+      prodState.pageSize = (v === 'all') ? 'all' : parseInt(v);
+      prodState.page = 0;
+      clearSelection();
       loadProducts();
     });
     $('#adm-prod-new').addEventListener('click', () => openProductEditor(null));
   }
 
+  function clearSelection() {
+    prodState.selected.clear();
+    renderBulkBar();
+  }
+
   async function loadProducts() {
     const host = $('#adm-prod-list');
     host.innerHTML = '<div class="adm-mut" style="padding:14px">Loading…</div>';
-    const { search, kind, onlyActive, page } = prodState;
+    const { search, kind, onlyActive, page, pageSize } = prodState;
     const qParts = ['select=id,name,slug,manufacturer,kind,release_year,tags,aliases,is_active',
-                    'order=name.asc',
-                    'limit=' + PAGE_SIZE,
-                    'offset=' + (page * PAGE_SIZE)];
+                    'order=name.asc'];
+    const limit = pageSize === 'all' ? 10000 : pageSize;
+    qParts.push('limit=' + limit);
+    if (pageSize !== 'all') qParts.push('offset=' + (page * limit));
     if (search) {
       const s = encodeURIComponent('*' + search + '*');
       qParts.push(`or=(name.ilike.${s},slug.ilike.${s},manufacturer.ilike.${s})`);
@@ -465,8 +486,10 @@
     try {
       const { data, total } = await SB.selectWithCount('products', qParts.join('&'));
       prodState.total = total;
+      prodState.lastVisibleIds = data.map(p => p.id);
       renderProductsList(data);
       renderProductsPagination();
+      renderBulkBar();
     } catch (err) {
       console.error(err);
       host.innerHTML = '';
@@ -482,8 +505,24 @@
       return;
     }
     const table = el('table', { class: 'adm-table' });
+
+    // Header with select-all checkbox
+    const selectAllCb = el('input', { type: 'checkbox', class: 'adm-row-check',
+      onchange: (e) => {
+        rows.forEach(p => {
+          if (e.target.checked) prodState.selected.add(p.id);
+          else                  prodState.selected.delete(p.id);
+        });
+        // re-render rows so per-row checkbox states reflect selection
+        document.querySelectorAll('#adm-prod-list .adm-row-check').forEach((cb, i) => {
+          if (i > 0) cb.checked = e.target.checked;
+        });
+        renderBulkBar();
+      }
+    });
     const thead = el('thead', {}, [
       el('tr', {}, [
+        el('th', { class: 'adm-th-check' }, [selectAllCb]),
         el('th', { text: 'Name' }),
         el('th', { text: 'Manufacturer' }),
         el('th', { text: 'Kind' }),
@@ -494,11 +533,23 @@
       ])
     ]);
     table.appendChild(thead);
+
     const tbody = el('tbody', {});
     rows.forEach(p => {
       const tr = el('tr', { class: p.is_active ? '' : 'is-inactive', onclick: (e) => {
-        if (e.target.tagName !== 'BUTTON') openProductEditor(p);
+        // ignore clicks on interactive controls so they don't open the editor
+        if (e.target.closest('input,button,label')) return;
+        openProductEditor(p);
       }});
+      const cb = el('input', { type: 'checkbox', class: 'adm-row-check',
+        onchange: (e) => {
+          if (e.target.checked) prodState.selected.add(p.id);
+          else                  prodState.selected.delete(p.id);
+          renderBulkBar();
+        }
+      });
+      if (prodState.selected.has(p.id)) cb.checked = true;
+      tr.appendChild(el('td', { class: 'adm-td-check' }, [cb]));
       tr.appendChild(el('td', { class: 'adm-cell-name' }, [
         el('div', { class: 'adm-cell-name-main', text: p.name }),
         el('div', { class: 'adm-cell-name-sub', text: p.slug })
@@ -508,8 +559,17 @@
       tr.appendChild(el('td', { text: p.release_year != null ? String(p.release_year) : '—' }));
       tr.appendChild(el('td', { class: 'adm-tag-cell', text: (p.tags || []).slice(0, 4).join(', ') + ((p.tags || []).length > 4 ? ' …' : '') }));
       tr.appendChild(el('td', { class: 'adm-status-cell', text: p.is_active ? '✓' : 'inactive' }));
-      tr.appendChild(el('td', {}, [
-        el('button', { class: 'adm-btn adm-btn--ghost adm-btn--sm', text: 'Edit', onclick: (e) => { e.stopPropagation(); openProductEditor(p); } })
+      tr.appendChild(el('td', { class: 'adm-actions-cell' }, [
+        el('button', { class: 'adm-btn adm-btn--ghost adm-btn--sm', text: 'Edit',
+          onclick: (e) => { e.stopPropagation(); openProductEditor(p); } }),
+        el('button', { class: 'adm-btn adm-btn--ghost adm-btn--sm adm-btn--danger-text', text: 'Delete',
+          onclick: (e) => {
+            e.stopPropagation();
+            if (confirm('Delete "' + p.name + '" permanently? This also clears its guess history.')) {
+              deleteProduct(p.id);
+            }
+          }
+        })
       ]));
       tbody.appendChild(tr);
     });
@@ -521,8 +581,15 @@
     const host = $('#adm-prod-pagination');
     host.innerHTML = '';
     const total = prodState.total;
-    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const stats = el('span', { class: 'adm-mut', text: `${total.toLocaleString()} total · page ${prodState.page + 1} of ${pages}` });
+    if (prodState.pageSize === 'all') {
+      host.appendChild(el('span', { class: 'adm-mut',
+        text: `${total.toLocaleString()} total · showing all (capped at 10,000)` }));
+      return;
+    }
+    const size = prodState.pageSize;
+    const pages = Math.max(1, Math.ceil(total / size));
+    const stats = el('span', { class: 'adm-mut',
+      text: `${total.toLocaleString()} total · page ${prodState.page + 1} of ${pages}` });
     const prev = el('button', { class: 'adm-btn adm-btn--sm', text: '← Prev',
       onclick: () => { if (prodState.page > 0) { prodState.page--; loadProducts(); } }
     });
@@ -534,6 +601,106 @@
     host.appendChild(prev);
     host.appendChild(stats);
     host.appendChild(next);
+  }
+
+  // ===============================================================
+  // Bulk action bar
+  // ===============================================================
+  function renderBulkBar() {
+    const bar = $('#adm-prod-bulkbar');
+    if (!bar) return;
+    const n = prodState.selected.size;
+    bar.innerHTML = '';
+    if (n === 0) { bar.classList.add('adm-hidden'); return; }
+    bar.classList.remove('adm-hidden');
+    bar.appendChild(el('span', { class: 'adm-bulk-count', text: n + ' selected' }));
+    bar.appendChild(el('button', { class: 'adm-btn adm-btn--sm', text: 'Activate',
+      onclick: () => bulkSetActive(true) }));
+    bar.appendChild(el('button', { class: 'adm-btn adm-btn--sm', text: 'Deactivate',
+      onclick: () => bulkSetActive(false) }));
+    bar.appendChild(el('button', { class: 'adm-btn adm-btn--sm', text: 'Add to category…',
+      onclick: () => openBulkCategoryPicker(true) }));
+    bar.appendChild(el('button', { class: 'adm-btn adm-btn--sm', text: 'Remove from category…',
+      onclick: () => openBulkCategoryPicker(false) }));
+    bar.appendChild(el('button', { class: 'adm-btn adm-btn--sm adm-btn--danger', text: 'Delete',
+      onclick: () => bulkDelete() }));
+    bar.appendChild(el('span', { style: 'flex:1' }));
+    bar.appendChild(el('button', { class: 'adm-btn adm-btn--ghost adm-btn--sm', text: 'Clear selection',
+      onclick: () => { clearSelection(); loadProducts(); } }));
+  }
+
+  async function bulkSetActive(active) {
+    const ids = Array.from(prodState.selected);
+    if (!ids.length) return;
+    if (!confirm(`${active ? 'Activate' : 'Deactivate'} ${ids.length} products?`)) return;
+    try {
+      await SB.update('products', 'id=in.(' + ids.join(',') + ')', { is_active: active });
+      toast(`${active ? 'Activated' : 'Deactivated'} ${ids.length} products.`, 'good');
+      clearSelection();
+      loadProducts();
+    } catch (err) {
+      console.error(err);
+      toast('Failed: ' + err.message.slice(0, 120), 'error');
+    }
+  }
+
+  async function bulkDelete() {
+    const ids = Array.from(prodState.selected);
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} products permanently? This also clears related guess history. Cannot be undone.`)) return;
+    try {
+      const affected = await SB.rpc('bulk_delete_products', { p_product_ids: ids });
+      toast('Deleted ' + (affected || ids.length) + ' products.', 'good');
+      clearSelection();
+      loadProducts();
+    } catch (err) {
+      console.error(err);
+      toast('Bulk delete failed: ' + err.message.slice(0, 120), 'error');
+    }
+  }
+
+  function openBulkCategoryPicker(addMode) {
+    const tagBased = (categories || []).filter(c => c.rule && Array.isArray(c.rule.tags) && c.rule.tags.length);
+    if (!tagBased.length) {
+      toast('No tag-based categories defined.', 'error'); return;
+    }
+    const sorted = tagBased.slice().sort((a, b) => a.name.localeCompare(b.name));
+    const body = el('div');
+    body.appendChild(el('p', { class: 'adm-mut',
+      text: (addMode ? 'Add' : 'Remove') + ' tags from this category to/from ' + prodState.selected.size + ' selected products.' }));
+    let pickedId = null;
+    const list = el('div', { class: 'adm-bulk-cat-list' });
+    sorted.forEach(c => {
+      const lab = el('label', { class: 'adm-bulk-cat-row' });
+      const radio = el('input', { type: 'radio', name: 'bulk-cat' });
+      radio.addEventListener('change', () => { pickedId = c.id; });
+      lab.appendChild(radio);
+      lab.appendChild(el('span', { class: 'adm-bulk-cat-name', text: c.name }));
+      lab.appendChild(el('span', { class: 'adm-bulk-cat-tags', text: '{' + c.rule.tags.join(', ') + '}' }));
+      list.appendChild(lab);
+    });
+    body.appendChild(list);
+
+    openModal({
+      title: addMode ? 'Add to category' : 'Remove from category',
+      body,
+      onSave: async () => {
+        if (!pickedId) { toast('Pick a category first.', 'error'); return; }
+        const ids = Array.from(prodState.selected);
+        try {
+          const affected = await SB.rpc('bulk_set_category_membership', {
+            p_product_ids: ids, p_category_id: pickedId, p_in_category: addMode
+          });
+          toast((addMode ? 'Added ' : 'Removed ') + (affected || ids.length) + ' products. Run "Refresh mappings" to apply.', 'good');
+          closeModal();
+          clearSelection();
+          loadProducts();
+        } catch (err) {
+          console.error(err);
+          toast('Failed: ' + err.message.slice(0, 120), 'error');
+        }
+      }
+    });
   }
 
   function openProductEditor(product) {
