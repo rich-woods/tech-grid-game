@@ -19,10 +19,13 @@
   const prodState = {
     search: '', kind: '', onlyActive: true,
     page: 0, total: 0, pageSize: 50, initialized: false,
-    selected: new Set(),       // ids of currently-selected products
-    lastVisibleIds: []         // ids on the page currently displayed
+    selected: new Set(),
+    lastVisibleIds: [],
+    categoryFilter: new Set(), // category UUIDs whose tags filter the list
+    catFilterRendered: false
   };
-  const catState  = { initialized: false };
+  const catState = { initialized: false };
+  const fbState  = { initialized: false, status: 'new' };
   const modalState = { onSave: null, onDelete: null };
 
   // ---------- Supabase REST helper ------------------------------
@@ -229,7 +232,14 @@
         } else if (name === 'categories' && !catState.initialized) {
           catState.initialized = true;
           loadCategories();
+        } else if (name === 'feedback' && !fbState.initialized) {
+          fbState.initialized = true;
+          bindFeedback();
+          loadFeedback();
         }
+        // Re-render category filter checkboxes if products tab is opened
+        // (in case the user added a new category in the Categories tab).
+        if (name === 'products' && prodState.initialized) renderCategoryFilter();
       });
     });
   }
@@ -461,6 +471,58 @@
       loadProducts();
     });
     $('#adm-prod-new').addEventListener('click', () => openProductEditor(null));
+    $('#adm-prod-catfilter-clear').addEventListener('click', (e) => {
+      e.preventDefault();
+      prodState.categoryFilter.clear();
+      renderCategoryFilter();   // re-render to clear checkboxes
+      prodState.page = 0;
+      clearSelection();
+      loadProducts();
+    });
+    renderCategoryFilter();
+  }
+
+  function renderCategoryFilter() {
+    const host = $('#adm-prod-catfilter');
+    if (!host) return;
+    const tagBased = (categories || [])
+      .filter(c => c.is_active && c.rule && Array.isArray(c.rule.tags) && c.rule.tags.length)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    host.innerHTML = '';
+    if (!tagBased.length) {
+      host.appendChild(el('div', { class: 'adm-mut', text: 'No tag-based categories defined yet.' }));
+      return;
+    }
+    tagBased.forEach(c => {
+      const wrap = el('label', { class: 'adm-cat-check' });
+      const cb = el('input', { type: 'checkbox' });
+      if (prodState.categoryFilter.has(c.id)) cb.checked = true;
+      cb.addEventListener('change', () => {
+        if (cb.checked) prodState.categoryFilter.add(c.id);
+        else            prodState.categoryFilter.delete(c.id);
+        prodState.page = 0;
+        clearSelection();
+        updateCategoryFilterCount();
+        loadProducts();
+      });
+      wrap.appendChild(cb);
+      wrap.appendChild(el('span', { text: c.name }));
+      host.appendChild(wrap);
+    });
+    updateCategoryFilterCount();
+  }
+
+  function updateCategoryFilterCount() {
+    const badge = $('#adm-prod-catfilter-count');
+    if (!badge) return;
+    const n = prodState.categoryFilter.size;
+    if (n === 0) {
+      badge.classList.add('adm-hidden');
+      badge.textContent = '';
+    } else {
+      badge.classList.remove('adm-hidden');
+      badge.textContent = n + ' active';
+    }
   }
 
   function clearSelection() {
@@ -483,6 +545,18 @@
     }
     if (kind) qParts.push('kind=eq.' + kind);
     if (onlyActive) qParts.push('is_active=eq.true');
+    // Category filter: union the tag arrays of all checked categories,
+    // then keep products whose tags overlap that set (OR semantics).
+    if (prodState.categoryFilter.size) {
+      const tagSet = new Set();
+      prodState.categoryFilter.forEach(id => {
+        const c = (categories || []).find(x => x.id === id);
+        if (c && c.rule && Array.isArray(c.rule.tags)) c.rule.tags.forEach(t => tagSet.add(t));
+      });
+      if (tagSet.size) {
+        qParts.push('tags=ov.{' + Array.from(tagSet).map(encodeURIComponent).join(',') + '}');
+      }
+    }
     try {
       const { data, total } = await SB.selectWithCount('products', qParts.join('&'));
       prodState.total = total;
@@ -938,6 +1012,107 @@
       console.error(err);
       toast('Delete failed: ' + err.message.slice(0, 120), 'error');
     }
+  }
+
+  // ===============================================================
+  // Feedback tab
+  // ===============================================================
+  function bindFeedback() {
+    $('#adm-fb-status').addEventListener('change', () => {
+      fbState.status = $('#adm-fb-status').value;
+      loadFeedback();
+    });
+    $('#adm-fb-refresh').addEventListener('click', loadFeedback);
+  }
+
+  async function loadFeedback() {
+    const host = $('#adm-fb-list');
+    host.innerHTML = '<div class="adm-mut" style="padding:14px">Loading…</div>';
+    const q = ['select=*', 'order=created_at.desc', 'limit=200'];
+    if (fbState.status) q.push('status=eq.' + fbState.status);
+    try {
+      const rows = await SB.select('feedback', q.join('&'));
+      renderFeedbackList(rows || []);
+    } catch (err) {
+      console.error(err);
+      host.innerHTML = '';
+      host.appendChild(el('div', { class: 'adm-mut', text: 'Error: ' + err.message }));
+    }
+  }
+
+  function renderFeedbackList(rows) {
+    const host = $('#adm-fb-list');
+    host.innerHTML = '';
+    if (!rows.length) {
+      host.appendChild(el('div', { class: 'adm-empty', text: 'No feedback in this status.' }));
+      return;
+    }
+    const list = el('div', { class: 'adm-fb-list' });
+    rows.forEach(fb => {
+      const card = el('div', { class: 'adm-fb-card adm-fb--' + fb.status });
+      const head = el('div', { class: 'adm-fb-head' });
+      head.appendChild(el('span', { class: 'adm-fb-date', text: formatDateTime(fb.created_at) }));
+      head.appendChild(el('span', { class: 'adm-pill-' + (fb.status === 'new' ? 'on' : 'off'), text: fb.status }));
+      card.appendChild(head);
+      const meta = el('div', { class: 'adm-fb-meta' });
+      if (fb.display_name) meta.appendChild(el('span', { text: fb.display_name }));
+      if (fb.contact) {
+        const a = el('a', { href: 'mailto:' + fb.contact + '?subject=Re: Tech Grid Feedback', text: fb.contact });
+        meta.appendChild(a);
+      }
+      if (meta.children.length) card.appendChild(meta);
+      card.appendChild(el('div', { class: 'adm-fb-msg', text: fb.message }));
+      if (fb.page_url) {
+        card.appendChild(el('div', { class: 'adm-fb-url', text: fb.page_url }));
+      }
+      const actions = el('div', { class: 'adm-fb-actions' });
+      if (fb.status !== 'read') {
+        actions.appendChild(el('button', { class: 'adm-btn adm-btn--sm', text: 'Mark read',
+          onclick: () => updateFeedback(fb.id, { status: 'read' }) }));
+      }
+      if (fb.status !== 'archived') {
+        actions.appendChild(el('button', { class: 'adm-btn adm-btn--sm', text: 'Archive',
+          onclick: () => updateFeedback(fb.id, { status: 'archived' }) }));
+      }
+      if (fb.status !== 'new') {
+        actions.appendChild(el('button', { class: 'adm-btn adm-btn--sm adm-btn--ghost', text: 'Mark new',
+          onclick: () => updateFeedback(fb.id, { status: 'new' }) }));
+      }
+      actions.appendChild(el('button', { class: 'adm-btn adm-btn--sm adm-btn--danger-text', text: 'Delete',
+        onclick: () => {
+          if (confirm('Delete this feedback permanently?')) deleteFeedback(fb.id);
+        }
+      }));
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+    host.appendChild(list);
+  }
+
+  async function updateFeedback(id, body) {
+    try {
+      await SB.update('feedback', 'id=eq.' + id, body);
+      loadFeedback();
+    } catch (err) {
+      console.error(err);
+      toast('Update failed: ' + err.message.slice(0, 120), 'error');
+    }
+  }
+  async function deleteFeedback(id) {
+    try {
+      await SB.delete('feedback', 'id=eq.' + id);
+      loadFeedback();
+    } catch (err) {
+      console.error(err);
+      toast('Delete failed: ' + err.message.slice(0, 120), 'error');
+    }
+  }
+  function formatDateTime(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch (_) { return iso; }
   }
 
   // ---------- Date helpers (Eastern Time) ----------------------

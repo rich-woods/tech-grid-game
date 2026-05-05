@@ -257,6 +257,25 @@
 /* Cell-breakdown popover --------------------------------------- */
 .tgg-breakdown { margin-top: 6px; font-size: 0.7rem; color: var(--tgg-muted); }
 
+/* Footer with feedback link ------------------------------------- */
+.tgg-footer {
+  margin-top: 14px;
+  text-align: center;
+}
+.tgg-feedback-link {
+  display: inline-block;
+  font-size: 0.78rem;
+  color: var(--tgg-muted) !important;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.tgg-feedback-link:hover {
+  color: var(--tgg-accent) !important;
+  background: rgba(247,148,29,0.08);
+}
+
 /* Mobile --------------------------------------------------------- */
 @media (max-width: 540px) {
   .tgg-root { padding: 14px; margin: 8px; border-radius: 10px; }

@@ -313,6 +313,78 @@ label input:focus, label select:focus { border-color: var(--accent); }
 .adm-bulk-cat-name { font-weight: 500; color: var(--text); }
 .adm-bulk-cat-tags { font-family: ui-monospace, monospace; font-size: 0.74rem; color: var(--muted); }
 
+/* Collapsible category filter on Products toolbar */
+.adm-filter-details {
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.adm-filter-details > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 10px;
+  list-style: none;
+  user-select: none;
+}
+.adm-filter-details > summary::-webkit-details-marker { display: none; }
+.adm-filter-details > summary::before {
+  content: '▸'; transition: transform 0.15s;
+  font-size: 0.7rem; color: var(--muted);
+}
+.adm-filter-details[open] > summary::before { transform: rotate(90deg); }
+.adm-filter-details > summary:hover { color: var(--text); }
+.adm-filter-count {
+  background: var(--accent); color: #0b1220;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 600;
+}
+.adm-filter-actions {
+  display: flex; justify-content: flex-end; gap: 6px;
+  padding: 6px 10px 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* Category checkbox grid — filter variant has slightly different padding */
+.adm-cat-checkboxes--filter {
+  border: 0; border-radius: 0; background: transparent;
+  margin: 0; padding: 8px 12px; max-height: 220px;
+}
+
+/* ----- Feedback tab ----- */
+.adm-fb-list { display: flex; flex-direction: column; gap: 10px; }
+.adm-fb-card {
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-left: 3px solid var(--muted);
+  border-radius: 8px; padding: 12px 14px;
+}
+.adm-fb-card.adm-fb--new      { border-left-color: var(--accent); }
+.adm-fb-card.adm-fb--read     { border-left-color: var(--good); opacity: 0.85; }
+.adm-fb-card.adm-fb--archived { border-left-color: var(--muted); opacity: 0.55; }
+.adm-fb-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 6px;
+  font-size: 0.78rem; color: var(--muted);
+}
+.adm-fb-meta {
+  display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;
+  font-size: 0.82rem; color: var(--muted);
+}
+.adm-fb-meta a { color: var(--accent); text-decoration: none; }
+.adm-fb-meta a:hover { text-decoration: underline; }
+.adm-fb-msg {
+  white-space: pre-wrap; line-height: 1.5;
+  font-size: 0.9rem; color: var(--text);
+  padding: 6px 0;
+}
+.adm-fb-url {
+  font-family: ui-monospace, monospace; font-size: 0.72rem;
+  color: var(--muted); word-break: break-all; margin-top: 4px;
+}
+.adm-fb-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
 /* Category checkbox grid inside product editor */
 .adm-cat-checkboxes {
   display: grid;

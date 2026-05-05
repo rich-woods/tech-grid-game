@@ -134,9 +134,101 @@
     root.appendChild(buildPane('leaders', buildLeaderboardPlaceholder()));
 
     root.appendChild(buildModal());
+    root.appendChild(buildFeedbackModal());
     root.appendChild(el('div', { id: 'tgg-toast', class: 'tgg-toast' }));
+    root.appendChild(buildFooter());
 
     setActivePane(state.activePane);
+  }
+
+  function buildFooter() {
+    return el('div', { class: 'tgg-footer' }, [
+      el('a', {
+        class: 'tgg-feedback-link',
+        href: '#',
+        text: 'Send feedback',
+        onclick: (e) => { e.preventDefault(); openFeedbackModal(); }
+      })
+    ]);
+  }
+
+  function buildFeedbackModal() {
+    return el('div', { class: 'tgg-modal-bg', id: 'tgg-fb-bg', onclick: (e) => {
+      if (e.target.id === 'tgg-fb-bg') closeFeedbackModal();
+    } }, [
+      el('div', { class: 'tgg-modal' }, [
+        el('h3', { text: 'Send feedback' }),
+        el('p', { text: 'Tell us what you liked, what broke, what was confusing — anything helps.' }),
+        el('input', {
+          class: 'tgg-input', id: 'tgg-fb-name', type: 'text',
+          placeholder: 'Your name (optional)', maxlength: 80, autocomplete: 'off',
+          style: 'margin-bottom:8px'
+        }),
+        el('input', {
+          class: 'tgg-input', id: 'tgg-fb-contact', type: 'email',
+          placeholder: 'Email (optional, only if you want a reply)', maxlength: 200,
+          autocomplete: 'off', style: 'margin-bottom:8px'
+        }),
+        (() => {
+          const ta = el('textarea', {
+            class: 'tgg-input', id: 'tgg-fb-msg', rows: 5, maxlength: 4000,
+            placeholder: 'Your feedback…',
+            style: 'resize:vertical;font-family:inherit'
+          });
+          return ta;
+        })(),
+        el('div', { class: 'tgg-modal-actions' }, [
+          el('button', { class: 'tgg-btn tgg-btn--ghost', text: 'Cancel', onclick: closeFeedbackModal }),
+          el('button', { class: 'tgg-btn tgg-btn--primary', id: 'tgg-fb-submit', text: 'Send', onclick: submitFeedback })
+        ])
+      ])
+    ]);
+  }
+
+  function openFeedbackModal() {
+    const name = $('#tgg-fb-name'); if (name) name.value = state.stats.displayName || '';
+    const ctc  = $('#tgg-fb-contact'); if (ctc) ctc.value = '';
+    const msg  = $('#tgg-fb-msg'); if (msg) msg.value = '';
+    $('#tgg-fb-bg').classList.add('is-open');
+    setTimeout(() => { const m = $('#tgg-fb-msg'); if (m) m.focus(); }, 0);
+  }
+  function closeFeedbackModal() {
+    $('#tgg-fb-bg').classList.remove('is-open');
+  }
+
+  async function submitFeedback() {
+    const message = ($('#tgg-fb-msg').value || '').trim();
+    if (message.length < 5) { toast('Please write a bit more.'); return; }
+    if (message.length > 4000) { toast('Too long — under 4000 characters please.'); return; }
+    const btn = $('#tgg-fb-submit');
+    btn.disabled = true;
+    try {
+      const result = await SB.rpc('submit_feedback', {
+        p_player_id:    state.playerId,
+        p_display_name: ($('#tgg-fb-name').value || '').trim() || state.stats.displayName || null,
+        p_contact:      ($('#tgg-fb-contact').value || '').trim() || null,
+        p_message:      message,
+        p_user_agent:   navigator.userAgent,
+        p_page_url:     location.href
+      });
+      if (result && result.ok) {
+        toast('Thanks — feedback received.');
+        closeFeedbackModal();
+      } else {
+        const reason = result && result.reason;
+        const msg =
+          reason === 'too_short'    ? 'Please write a bit more.' :
+          reason === 'too_long'     ? 'Too long — under 4000 characters please.' :
+          reason === 'rate_limited' ? 'Too many submissions — try again later.' :
+          'Could not send feedback.';
+        toast(msg);
+      }
+    } catch (err) {
+      console.error('[tech-grid] feedback failed', err);
+      toast('Could not send feedback.');
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   function buildTabs() {

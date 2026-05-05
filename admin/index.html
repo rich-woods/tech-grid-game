@@ -36,6 +36,7 @@
         <button class="adm-tab" data-tab="future">Other day</button>
         <button class="adm-tab" data-tab="products">Products</button>
         <button class="adm-tab" data-tab="categories">Categories</button>
+        <button class="adm-tab" data-tab="feedback">Feedback</button>
       </nav>
 
       <div class="adm-pane is-active" data-pane="today">
@@ -84,6 +85,16 @@
               <option value="all">All</option>
             </select>
           </div>
+          <details class="adm-filter-details" id="adm-prod-catfilter-details">
+            <summary>
+              <span>Filter by category</span>
+              <span id="adm-prod-catfilter-count" class="adm-filter-count adm-hidden"></span>
+            </summary>
+            <div class="adm-cat-checkboxes adm-cat-checkboxes--filter" id="adm-prod-catfilter"></div>
+            <div class="adm-filter-actions">
+              <button class="adm-btn adm-btn--ghost adm-btn--sm" id="adm-prod-catfilter-clear">Clear all</button>
+            </div>
+          </details>
           <div id="adm-prod-bulkbar" class="adm-bulkbar adm-hidden"></div>
           <div id="adm-prod-list"></div>
           <div id="adm-prod-pagination" class="adm-pagination"></div>
@@ -100,6 +111,25 @@
           </div>
           <p class="adm-mut">Categories define which products satisfy each row/column header. After editing rules, click <strong>Refresh mappings</strong> in the Products tab.</p>
           <div id="adm-cat-list"></div>
+        </div>
+      </div>
+
+      <div class="adm-pane" data-pane="feedback">
+        <div class="adm-card">
+          <div class="adm-card-head">
+            <h2>Player feedback</h2>
+            <div class="adm-card-actions">
+              <select id="adm-fb-status" class="adm-input adm-input--inline">
+                <option value="new">New</option>
+                <option value="read">Read</option>
+                <option value="archived">Archived</option>
+                <option value="">All</option>
+              </select>
+              <button class="adm-btn" id="adm-fb-refresh">Refresh</button>
+            </div>
+          </div>
+          <p class="adm-mut">Feedback submitted from the game's "Send feedback" link. To forward new submissions to <code>rich.w@valnetinc.com</code> automatically, set up a Supabase Database Webhook on the <code>feedback</code> table that POSTs to a Zapier or Pipedream workflow.</p>
+          <div id="adm-fb-list"></div>
         </div>
       </div>
     </section>
