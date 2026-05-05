@@ -240,13 +240,30 @@ def sql_text_array(arr):
     return "'{" + ",".join(cleaned) + "}'"
 
 # ---------- main ----------------------------------------------------
+_BAD_PREFIXES = (
+    "total", "summary", "see also", "notes", "references", "disclaimer",
+    "note:", "note ", "key:", "legend", "discontinued", "no longer", "the ",
+    "this ", "current ", "former ", "former models", "table of",
+)
+_SENTENCE_PAT = re.compile(r"\.\s+\S|:\s+\S|;\s+\S")  # period/colon/semicolon followed by space + word
+_TOO_MANY_WORDS = re.compile(r"^(\S+\s+){6,}\S+$")     # 7+ words = probably a sentence
+
 def is_plausible_product_name(name):
     if not name or len(name) < MIN_NAME_LENGTH or len(name) > MAX_NAME_LENGTH:
         return False
     if not re.search(r"[A-Za-z]", name):
         return False
-    # Skip rows that look like section headings (often all-caps or start with "Total")
-    if name.lower().startswith(("total", "summary", "see also", "notes", "references")):
+    low = name.lower()
+    if any(low.startswith(p) for p in _BAD_PREFIXES):
+        return False
+    # Reject anything that looks like a sentence: "...; the next..." or "Note: ..."
+    if _SENTENCE_PAT.search(name):
+        return False
+    # Reject likely sentence by word count (real product names rarely > 6 words)
+    if _TOO_MANY_WORDS.match(name):
+        return False
+    # Reject if it ends with a sentence terminator (real products don't)
+    if name.rstrip().endswith(('.', '!', '?')):
         return False
     return True
 

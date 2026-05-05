@@ -18,3 +18,4 @@ __pycache__/
 .env.local
 *.local
 supabase/.scrape.log
+supabase/.scrape_wp.log
