@@ -241,8 +241,8 @@
       renderEditor('#adm-future', d);
     });
 
-    // Cache categories + product counts (used by puzzle editor selects)
-    const cats = await SB.select('categories', 'select=id,name,description,is_active&order=name.asc&limit=500');
+    // Cache categories + product counts (used by puzzle editor selects + product editor checkboxes)
+    const cats = await SB.select('categories', 'select=id,name,description,rule,is_active&order=name.asc&limit=500');
     categories = cats.filter(c => c.is_active);
 
     const pcs = await SB.select('product_categories', 'select=category_id&limit=50000');
@@ -546,14 +546,36 @@
     form.appendChild(formField('manufacturer', 'Manufacturer', 'text', p.manufacturer || ''));
     form.appendChild(formSelect('kind', 'Kind', p.kind, [['hardware','Hardware'], ['software','Software']]));
     form.appendChild(formField('release_year', 'Release year', 'number', p.release_year));
-    form.appendChild(formField('tags', 'Tags', 'text', (p.tags || []).join(', '), false, 'comma-separated, e.g. smartphone, apple, mobile'));
     form.appendChild(formField('aliases', 'Aliases', 'text', (p.aliases || []).join(', '), false, 'alternate names players might type, e.g. ps5'));
     form.appendChild(formCheckbox('is_active', 'Active (used in puzzles)', p.is_active));
+
+    // ---- Category checkboxes ----
+    const tagBased = (categories || []).filter(c => c.rule && Array.isArray(c.rule.tags) && c.rule.tags.length);
+    const sortedCats = tagBased.slice().sort((a, b) => a.name.localeCompare(b.name));
+    if (sortedCats.length) {
+      form.appendChild(el('div', { class: 'adm-form-section', text: 'Categories' }));
+      const help = el('div', { class: 'adm-help', style: 'margin: -4px 0 8px',
+        text: 'Check categories this product belongs to. (Manufacturer, kind, and year categories auto-apply from the fields above.)' });
+      form.appendChild(help);
+      const grid = el('div', { class: 'adm-cat-checkboxes' });
+      const productTags = new Set(p.tags || []);
+      sortedCats.forEach(cat => {
+        const ruleTags = cat.rule.tags;
+        const checked = ruleTags.some(t => productTags.has(t));
+        const wrap = el('label', { class: 'adm-cat-check' });
+        const cb = el('input', { type: 'checkbox', name: '__cat_' + cat.id, value: cat.id });
+        if (checked) cb.checked = true;
+        wrap.appendChild(cb);
+        wrap.appendChild(el('span', { text: cat.name }));
+        grid.appendChild(wrap);
+      });
+      form.appendChild(grid);
+    }
 
     openModal({
       title: isNew ? 'Add product' : 'Edit: ' + p.name,
       body: form,
-      onSave: () => saveProduct(form, p.id),
+      onSave: () => saveProduct(form, p, sortedCats),
       onDelete: isNew ? null : () => {
         if (confirm('Delete "' + p.name + '" permanently? This also clears related guess history. Cannot be undone.')) {
           deleteProduct(p.id);
@@ -562,24 +584,37 @@
     });
   }
 
-  async function saveProduct(form, id) {
+  async function saveProduct(form, original, sortedCats) {
     const get = (n) => form.querySelector('[name="' + n + '"]');
     const name = get('name').value.trim();
     if (!name) { toast('Name is required.', 'error'); return; }
+
+    // Derive new tags array from category checkboxes:
+    //   - Take the existing tags that aren't "owned" by any tag-based category (preserve them).
+    //   - Add every tag from the categories that are now checked.
+    const managedTags = new Set();
+    sortedCats.forEach(cat => cat.rule.tags.forEach(t => managedTags.add(t)));
+    const preserved = (original.tags || []).filter(t => !managedTags.has(t));
+    const newTagSet = new Set(preserved);
+    sortedCats.forEach(cat => {
+      const cb = form.querySelector('[name="__cat_' + cat.id + '"]');
+      if (cb && cb.checked) cat.rule.tags.forEach(t => newTagSet.add(t));
+    });
+
     const body = {
       name,
       slug: get('slug').value.trim() || slugify(name),
       manufacturer: get('manufacturer').value.trim() || null,
       kind: get('kind').value,
       release_year: get('release_year').value ? parseInt(get('release_year').value) : null,
-      tags: parseCommaArray(get('tags').value),
+      tags: Array.from(newTagSet),
       aliases: parseCommaArray(get('aliases').value),
       is_active: get('is_active').checked
     };
     try {
-      if (id) await SB.update('products', 'id=eq.' + id, body);
-      else    await SB.insert('products', body);
-      toast('Saved. (Run "Refresh mappings" to update which categories this product satisfies.)', 'good');
+      if (original.id) await SB.update('products', 'id=eq.' + original.id, body);
+      else             await SB.insert('products', body);
+      toast('Saved. (Run "Refresh mappings" to apply category changes globally.)', 'good');
       closeModal();
       loadProducts();
     } catch (err) {
@@ -608,7 +643,7 @@
     const host = $('#adm-cat-list');
     host.innerHTML = '<div class="adm-mut" style="padding:14px">Loading…</div>';
     try {
-      const cats = await SB.select('categories', 'select=*&order=name.asc&limit=500');
+      const cats = await SB.select('categories', 'select=id,name,description,rule,is_active&order=name.asc&limit=500');
       categories = cats.filter(c => c.is_active);  // refresh global cache
       renderCategoriesList(cats);
     } catch (err) {

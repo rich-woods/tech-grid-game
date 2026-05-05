@@ -267,6 +267,30 @@ label input:focus, label select:focus { border-color: var(--accent); }
   padding-bottom: 6px; border-bottom: 1px solid var(--border);
 }
 
+/* Category checkbox grid inside product editor */
+.adm-cat-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 12px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.adm-cat-check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem; color: var(--text);
+  margin: 0; padding: 3px 0;
+  cursor: pointer;
+  font-weight: 400;
+}
+.adm-cat-check input { margin: 0; width: auto; padding: 0; }
+.adm-cat-check span { line-height: 1.2; }
+.adm-cat-check:hover { color: var(--accent); }
+
 /* Mobile: stack toolbar */
 @media (max-width: 540px) {
   .adm-toolbar { flex-direction: column; align-items: stretch; }
