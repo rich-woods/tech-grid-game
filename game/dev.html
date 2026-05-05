@@ -1,0 +1,38 @@
+<!--
+  Local-development wrapper.
+
+  Open via:
+      python -m http.server 8000
+  then http://localhost:8000/game/dev.html
+
+  Notes:
+   - index.html, styles.css, and game.js are deployment-ready for the
+     CMS embed (three separate paste fields).
+   - game.js itself is wrapped in <script>...</script> tags because
+     the CMS's JS field expects them. That makes it unloadable via
+     <script src="game.js">, so this dev page fetches the file and
+     executes the inner contents.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech Grid — Dev</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="tech-grid-root">
+    <div class="tgg-boot">Loading today's puzzle…</div>
+  </div>
+  <script>
+    fetch('game.js')
+      .then(function (r) { return r.text(); })
+      .then(function (code) {
+        var m = code.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+        new Function(m ? m[1] : code)();
+      })
+      .catch(function (err) { console.error('Failed to load game.js:', err); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech Grid — Admin</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main class="adm">
+    <header class="adm-header">
+      <h1>Tech Grid Admin</h1>
+      <div id="adm-conn" class="adm-conn"></div>
+    </header>
+
+    <!-- Connection / unlock -->
+    <section id="adm-login" class="adm-card">
+      <h2>Connect</h2>
+      <p>The admin dashboard talks to Supabase using your <strong>service_role</strong> key.
+         It is held only in this browser tab's <code>sessionStorage</code> and is cleared
+         when you close the tab. Never paste it into any other site.</p>
+      <label>Supabase URL
+        <input type="text" id="adm-url" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+      </label>
+      <label>service_role key
+        <input type="password" id="adm-key" autocomplete="off">
+      </label>
+      <button id="adm-unlock" class="adm-btn adm-btn--primary">Unlock</button>
+    </section>
+
+    <!-- Main app (hidden until unlocked) -->
+    <section id="adm-app" class="adm-hidden">
+      <nav class="adm-tabs">
+        <button class="adm-tab is-active" data-tab="today">Today</button>
+        <button class="adm-tab" data-tab="tomorrow">Tomorrow</button>
+        <button class="adm-tab" data-tab="future">Other day</button>
+        <button class="adm-tab" data-tab="catalog">Catalog</button>
+      </nav>
+
+      <div class="adm-pane is-active" data-pane="today">
+        <div id="adm-today"></div>
+      </div>
+      <div class="adm-pane" data-pane="tomorrow">
+        <div id="adm-tomorrow"></div>
+      </div>
+      <div class="adm-pane" data-pane="future">
+        <div class="adm-card">
+          <h2>Edit any future date</h2>
+          <label>Date (YYYY-MM-DD)
+            <input type="date" id="adm-future-date">
+          </label>
+          <button class="adm-btn" id="adm-future-load">Load / create</button>
+          <div id="adm-future"></div>
+        </div>
+      </div>
+      <div class="adm-pane" data-pane="catalog">
+        <div class="adm-card">
+          <h2>Catalog</h2>
+          <p>Use the Supabase Table Editor for product / category edits — it has typeahead,
+             validation, and bulk import. After editing, click below to recompute which
+             products satisfy which categories.</p>
+          <button class="adm-btn adm-btn--primary" id="adm-refresh-mappings">Refresh product → category mappings</button>
+          <div id="adm-catalog-stats" class="adm-mut" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="adm-toast" class="adm-toast"></div>
+  <script src="admin.js" defer></script>
+</body>
+</html>

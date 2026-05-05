@@ -1,0 +1,268 @@
+/* ===================================================================
+   Tech Grid — all styles scoped under .tgg- to coexist with host CSS.
+   No global resets; ride on the article's typography where possible.
+   =================================================================== */
+
+.tgg-root {
+  --tgg-bg:        #1a2535;
+  --tgg-panel:     #253447;
+  --tgg-panel-2:   #2f4358;
+  --tgg-border:    #3d5571;
+  --tgg-text:      #f0f4fa;
+  --tgg-muted:     #8a9bb0;
+  --tgg-accent:    #f7941d;
+  --tgg-accent-2:  #ffae47;
+  --tgg-correct:   #22c55e;
+  --tgg-wrong:     #ef4444;
+  --tgg-warn:      #ffae47;
+  --tgg-radius:    12px;
+  --tgg-shadow:    0 6px 28px rgba(0,0,0,0.35);
+
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+  color: var(--tgg-text);
+  background: var(--tgg-bg);
+  border-radius: var(--tgg-radius);
+  padding: 20px;
+  max-width: 720px;
+  margin: 16px auto;
+  box-shadow: var(--tgg-shadow);
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.tgg-root *, .tgg-root *::before, .tgg-root *::after { box-sizing: border-box; }
+
+/* Defeat host-page color cascade (especially in light mode) ----- */
+.tgg-root,
+.tgg-root h1, .tgg-root h2, .tgg-root h3, .tgg-root h4, .tgg-root h5, .tgg-root h6,
+.tgg-root p, .tgg-root div, .tgg-root span, .tgg-root label, .tgg-root li,
+.tgg-root small, .tgg-root strong, .tgg-root em, .tgg-root a,
+.tgg-root input, .tgg-root button, .tgg-root textarea {
+  color: var(--tgg-text) !important;
+}
+/* Muted variants override the blanket rule */
+.tgg-root .tgg-cell-meta,
+.tgg-root .tgg-cell-empty-hint,
+.tgg-root .tgg-stat-label,
+.tgg-root .tgg-suggestion-meta,
+.tgg-root .tgg-breakdown,
+.tgg-root .tgg-pane-empty,
+.tgg-root .tgg-title small,
+.tgg-root .tgg-modal p,
+.tgg-root .tgg-tab,
+.tgg-root .tgg-btn--ghost { color: var(--tgg-muted) !important; }
+.tgg-root .tgg-tab.is-active,
+.tgg-root .tgg-rarity { color: var(--tgg-accent) !important; }
+.tgg-root .tgg-rarity--legendary { color: #ffd285 !important; }
+.tgg-root .tgg-btn--primary { color: #1a2535 !important; }
+
+/* Boot state shown before the JS replaces the contents of #tech-grid-root */
+#tech-grid-root .tgg-boot {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+  background: #253447;
+  color: #8a9bb0;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  max-width: 720px;
+  margin: 16px auto;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.35);
+}
+
+/* Header ---------------------------------------------------------- */
+.tgg-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px; gap: 12px; flex-wrap: wrap;
+}
+.tgg-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; }
+.tgg-title small { display:block; font-weight:400; color: var(--tgg-muted); font-size: 0.8rem; margin-top:2px; }
+
+.tgg-tabs { display: flex; gap: 4px; background: var(--tgg-panel); padding: 4px; border-radius: 999px; }
+.tgg-tab {
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  font-size: 0.82rem; color: var(--tgg-muted);
+  background: transparent; border: 0;
+}
+.tgg-tab.is-active { background: var(--tgg-panel-2); color: var(--tgg-accent); box-shadow: 0 0 0 1px rgba(247,148,29,0.4); }
+.tgg-tab:hover { color: var(--tgg-text); }
+
+/* Grid ------------------------------------------------------------ */
+.tgg-board {
+  display: grid;
+  grid-template-columns: 1.1fr repeat(3, 1fr);
+  gap: 6px;
+  background: var(--tgg-panel);
+  padding: 10px;
+  border-radius: var(--tgg-radius);
+}
+.tgg-corner { background: transparent; }
+.tgg-header-cell {
+  background: var(--tgg-panel-2);
+  border: 1px solid var(--tgg-border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.82rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  min-height: 64px;
+}
+.tgg-cell {
+  background: var(--tgg-panel-2);
+  border: 1px solid var(--tgg-border);
+  border-radius: 8px;
+  min-height: 92px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  position: relative;
+  transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease;
+  user-select: none;
+}
+.tgg-cell:hover:not(.tgg-cell--filled):not(.tgg-cell--locked) {
+  border-color: var(--tgg-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(247,148,29,0.25);
+}
+.tgg-cell--correct {
+  background: linear-gradient(160deg, rgba(34,197,94,0.18), rgba(34,197,94,0.08));
+  border-color: rgba(34,197,94,0.5);
+  cursor: default;
+}
+.tgg-cell--wrong {
+  background: linear-gradient(160deg, rgba(239,68,68,0.18), rgba(239,68,68,0.08));
+  border-color: rgba(239,68,68,0.5);
+  cursor: default;
+}
+.tgg-cell--locked { opacity: 0.55; cursor: not-allowed; }
+.tgg-cell-product {
+  font-weight: 600; font-size: 0.85rem; line-height: 1.2;
+}
+.tgg-cell-meta {
+  font-size: 0.72rem; color: var(--tgg-muted); margin-top: 4px;
+}
+.tgg-rarity {
+  font-size: 0.7rem; font-weight: 700; margin-top: 6px;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(247,148,29,0.18); color: var(--tgg-accent);
+}
+.tgg-rarity--legendary {
+  background: rgba(247,148,29,0.32); color: #ffd285;
+  box-shadow: 0 0 0 1px rgba(247,148,29,0.5);
+}
+.tgg-cell-empty-hint { color: var(--tgg-muted); font-size: 0.78rem; }
+
+/* Status bar ------------------------------------------------------ */
+.tgg-status {
+  margin-top: 14px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.tgg-stat {
+  background: var(--tgg-panel);
+  border: 1px solid var(--tgg-border);
+  border-radius: 8px; padding: 10px; text-align: center;
+}
+.tgg-stat-num { font-size: 1.2rem; font-weight: 700; }
+.tgg-stat-label { font-size: 0.72rem; color: var(--tgg-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Modal / typeahead --------------------------------------------- */
+.tgg-modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: none; align-items: center; justify-content: center;
+  z-index: 99999; padding: 16px;
+}
+.tgg-modal-bg.is-open { display: flex; }
+.tgg-modal {
+  background: var(--tgg-panel);
+  border: 1px solid var(--tgg-border);
+  border-radius: var(--tgg-radius);
+  width: min(440px, 100%);
+  padding: 18px;
+  color: var(--tgg-text);
+  box-shadow: var(--tgg-shadow);
+}
+.tgg-modal h3 { margin: 0 0 4px 0; font-size: 1rem; }
+.tgg-modal p { margin: 0 0 12px 0; color: var(--tgg-muted); font-size: 0.85rem; }
+.tgg-input {
+  width: 100%; padding: 10px 12px; font-size: 0.95rem;
+  background: var(--tgg-panel-2); color: var(--tgg-text);
+  border: 1px solid var(--tgg-border); border-radius: 8px;
+  outline: none;
+}
+.tgg-input:focus { border-color: var(--tgg-accent); box-shadow: 0 0 0 3px rgba(247,148,29,0.18); }
+.tgg-root .tgg-suggestions {
+  list-style: none !important;
+  list-style-type: none !important;
+  margin: 6px 0 0 0 !important;
+  padding: 0 !important;
+  max-height: 220px; overflow-y: auto;
+  border-radius: 8px;
+  background: var(--tgg-panel-2);
+}
+.tgg-root .tgg-suggestion {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+  cursor: pointer;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  border-bottom: 1px solid var(--tgg-border);
+  display: block;
+}
+.tgg-root .tgg-suggestion::before,
+.tgg-root .tgg-suggestion::marker { content: none !important; display: none !important; }
+.tgg-root .tgg-suggestion > div { margin: 0 !important; }
+.tgg-root .tgg-suggestion:last-child { border-bottom: 0; }
+.tgg-root .tgg-suggestion.is-active,
+.tgg-root .tgg-suggestion:hover { background: var(--tgg-panel); }
+.tgg-root .tgg-suggestion-meta { color: var(--tgg-muted); font-size: 0.72rem; margin-top: 0 !important; }
+.tgg-modal-actions { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; }
+.tgg-btn {
+  padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--tgg-border); background: var(--tgg-panel-2); color: var(--tgg-text);
+  font-size: 0.85rem;
+}
+.tgg-btn--primary { background: var(--tgg-accent); color: #1a2535; border-color: transparent; font-weight: 600; }
+.tgg-btn--primary:hover:not(:disabled) { background: var(--tgg-accent-2); }
+.tgg-btn--ghost { background: transparent; color: var(--tgg-muted); }
+.tgg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Toast ----------------------------------------------------------- */
+.tgg-toast {
+  position: fixed; left: 50%; top: 16px; transform: translateX(-50%);
+  background: var(--tgg-panel-2); color: var(--tgg-text);
+  border: 1px solid var(--tgg-border);
+  padding: 10px 14px; border-radius: 8px;
+  z-index: 100000; font-size: 0.85rem; box-shadow: var(--tgg-shadow);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+}
+.tgg-toast.is-shown { opacity: 1; }
+
+/* Leaderboard / stats panes ------------------------------------- */
+.tgg-pane { display: none; }
+.tgg-pane.is-active { display: block; }
+.tgg-list { list-style: none; margin: 0; padding: 0; }
+.tgg-list li {
+  display: grid; grid-template-columns: 28px 1fr auto auto;
+  gap: 10px; align-items: center;
+  padding: 8px 10px; border-bottom: 1px solid var(--tgg-border);
+  font-size: 0.88rem;
+}
+.tgg-list li:nth-child(1) .tgg-rank { color: #fcd34d; }
+.tgg-list li:nth-child(2) .tgg-rank { color: #cbd5e1; }
+.tgg-list li:nth-child(3) .tgg-rank { color: #fdba74; }
+.tgg-rank { font-weight: 700; text-align: center; }
+.tgg-pane-empty { color: var(--tgg-muted); padding: 20px 4px; text-align: center; font-size: 0.9rem; }
+
+/* Cell-breakdown popover --------------------------------------- */
+.tgg-breakdown { margin-top: 6px; font-size: 0.7rem; color: var(--tgg-muted); }
+
+/* Mobile --------------------------------------------------------- */
+@media (max-width: 540px) {
+  .tgg-root { padding: 14px; margin: 8px; border-radius: 10px; }
+  .tgg-board { gap: 4px; padding: 6px; }
+  .tgg-header-cell { font-size: 0.72rem; padding: 6px; min-height: 52px; }
+  .tgg-cell { min-height: 76px; padding: 6px; }
+  .tgg-cell-product { font-size: 0.78rem; }
+  .tgg-title { font-size: 1.15rem; }
+}
