@@ -34,7 +34,8 @@
         <button class="adm-tab is-active" data-tab="today">Today</button>
         <button class="adm-tab" data-tab="tomorrow">Tomorrow</button>
         <button class="adm-tab" data-tab="future">Other day</button>
-        <button class="adm-tab" data-tab="catalog">Catalog</button>
+        <button class="adm-tab" data-tab="products">Products</button>
+        <button class="adm-tab" data-tab="categories">Categories</button>
       </nav>
 
       <div class="adm-pane is-active" data-pane="today">
@@ -53,18 +54,61 @@
           <div id="adm-future"></div>
         </div>
       </div>
-      <div class="adm-pane" data-pane="catalog">
+
+      <div class="adm-pane" data-pane="products">
         <div class="adm-card">
-          <h2>Catalog</h2>
-          <p>Use the Supabase Table Editor for product / category edits — it has typeahead,
-             validation, and bulk import. After editing, click below to recompute which
-             products satisfy which categories.</p>
-          <button class="adm-btn adm-btn--primary" id="adm-refresh-mappings">Refresh product → category mappings</button>
-          <div id="adm-catalog-stats" class="adm-mut" style="margin-top:12px"></div>
+          <div class="adm-card-head">
+            <h2>Products</h2>
+            <div class="adm-card-actions">
+              <button class="adm-btn" id="adm-refresh-mappings" title="Recompute which products satisfy which categories">Refresh mappings</button>
+              <button class="adm-btn adm-btn--primary" id="adm-prod-new">+ Add product</button>
+            </div>
+          </div>
+          <div class="adm-toolbar">
+            <input type="search" id="adm-prod-search" class="adm-input" placeholder="Search by name, slug, manufacturer…" autocomplete="off">
+            <select id="adm-prod-kind" class="adm-input adm-input--inline">
+              <option value="">All kinds</option>
+              <option value="hardware">Hardware</option>
+              <option value="software">Software</option>
+            </select>
+            <label class="adm-check">
+              <input type="checkbox" id="adm-prod-only-active" checked>
+              Active only
+            </label>
+          </div>
+          <div id="adm-prod-list"></div>
+          <div id="adm-prod-pagination" class="adm-pagination"></div>
+        </div>
+      </div>
+
+      <div class="adm-pane" data-pane="categories">
+        <div class="adm-card">
+          <div class="adm-card-head">
+            <h2>Categories</h2>
+            <div class="adm-card-actions">
+              <button class="adm-btn adm-btn--primary" id="adm-cat-new">+ Add category</button>
+            </div>
+          </div>
+          <p class="adm-mut">Categories define which products satisfy each row/column header. After editing rules, click <strong>Refresh mappings</strong> in the Products tab.</p>
+          <div id="adm-cat-list"></div>
         </div>
       </div>
     </section>
   </main>
+
+  <!-- Edit modal (shared by products and categories) -->
+  <div id="adm-modal" class="adm-modal-bg">
+    <div class="adm-modal">
+      <h3 id="adm-modal-title"></h3>
+      <div id="adm-modal-body"></div>
+      <div class="adm-modal-actions">
+        <button class="adm-btn adm-btn--danger adm-modal-delete-btn" id="adm-modal-delete" style="display:none">Delete</button>
+        <div style="flex:1"></div>
+        <button class="adm-btn adm-btn--ghost" id="adm-modal-cancel">Cancel</button>
+        <button class="adm-btn adm-btn--primary" id="adm-modal-save">Save</button>
+      </div>
+    </div>
+  </div>
 
   <div id="adm-toast" class="adm-toast"></div>
   <script src="admin.js" defer></script>
