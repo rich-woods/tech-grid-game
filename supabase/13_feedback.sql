@@ -58,6 +58,14 @@ begin
   if length(msg) > 4000 then
     return jsonb_build_object('ok', false, 'reason', 'too_long');
   end if;
+
+  -- Ensure the player row exists (FK target). New visitors who've never
+  -- submitted a guess won't have a players row yet; without this, the
+  -- INSERT below fails the foreign key constraint.
+  if p_player_id is not null then
+    insert into players (id) values (p_player_id) on conflict (id) do nothing;
+  end if;
+
   -- Soft rate-limit: same player can't spam more than 5 in last hour.
   if p_player_id is not null and (
     select count(*) from feedback
