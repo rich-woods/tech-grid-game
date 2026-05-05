@@ -58,9 +58,11 @@ SPECS = [
     ("Action camera",       ["camera","has-camera","action-cam"],                        "hardware", "Q1666010"),
     ("Drone",               ["drone","has-camera"],                                      "hardware", "Q2186409"),
     ("Smart speaker",       ["smart-home","audio","home"],                               "hardware", "Q19362034"),
-    ("Streaming device",    ["streaming","tv","home"],                                   "hardware", "Q1153484"),
-    ("Smart TV",            ["tv","home","has-touchscreen-no"],                          "hardware", "Q4373292"),
-    ("Television set",      ["tv","home"],                                               "hardware", "Q56242063"),
+    ("Streaming device",    ["streaming","home"],                                        "hardware", "Q1153484"),
+    # Smart TV (Q4373292) and Television set (Q56242063) intentionally
+    # excluded — Wikidata's coverage there is dominated by obscure model
+    # numbers that aren't guessable in a trivia game. Add notable TVs
+    # (LG C-series, Samsung Frame, etc.) as hand-curated products instead.
     ("Computer monitor",    ["monitor","display"],                                       "hardware", "Q47128893"),
     ("Computer keyboard",   ["keyboard","accessory"],                                    "hardware", "Q250"),
     ("Computer mouse",      ["mouse","accessory"],                                       "hardware", "Q7987"),
