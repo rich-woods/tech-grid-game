@@ -257,6 +257,28 @@
 /* Cell-breakdown popover --------------------------------------- */
 .tgg-breakdown { margin-top: 6px; font-size: 0.7rem; color: var(--tgg-muted); }
 
+/* Inline feedback-modal status message --------------------------- */
+.tgg-fb-status {
+  margin-top: 10px;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--tgg-muted) !important;
+}
+.tgg-fb-status--error {
+  color: var(--tgg-wrong) !important;
+  background: rgba(239,68,68,0.10);
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.tgg-fb-status--good {
+  color: var(--tgg-correct) !important;
+  background: rgba(34,197,94,0.10);
+  border: 1px solid rgba(34,197,94,0.4);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
 /* Footer with feedback link ------------------------------------- */
 .tgg-footer {
   margin-top: 14px;

@@ -52,7 +52,7 @@ declare
   name text := nullif(trim(coalesce(p_display_name, '')), '');
   ctc  text := nullif(trim(coalesce(p_contact, '')), '');
 begin
-  if length(msg) < 5 then
+  if length(msg) < 1 then
     return jsonb_build_object('ok', false, 'reason', 'too_short');
   end if;
   if length(msg) > 4000 then

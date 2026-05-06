@@ -177,6 +177,7 @@
           });
           return ta;
         })(),
+        el('div', { id: 'tgg-fb-status', class: 'tgg-fb-status' }),
         el('div', { class: 'tgg-modal-actions' }, [
           el('button', { class: 'tgg-btn tgg-btn--ghost', text: 'Cancel', onclick: closeFeedbackModal }),
           el('button', { class: 'tgg-btn tgg-btn--primary', id: 'tgg-fb-submit', text: 'Send', onclick: submitFeedback })
@@ -185,10 +186,18 @@
     ]);
   }
 
+  function setFbStatus(text, kind) {
+    const s = $('#tgg-fb-status');
+    if (!s) return;
+    s.textContent = text || '';
+    s.className = 'tgg-fb-status' + (kind ? ' tgg-fb-status--' + kind : '');
+  }
+
   function openFeedbackModal() {
     const name = $('#tgg-fb-name'); if (name) name.value = state.stats.displayName || '';
     const ctc  = $('#tgg-fb-contact'); if (ctc) ctc.value = '';
     const msg  = $('#tgg-fb-msg'); if (msg) msg.value = '';
+    setFbStatus('');
     $('#tgg-fb-bg').classList.add('is-open');
     setTimeout(() => { const m = $('#tgg-fb-msg'); if (m) m.focus(); }, 0);
   }
@@ -198,10 +207,11 @@
 
   async function submitFeedback() {
     const message = ($('#tgg-fb-msg').value || '').trim();
-    if (message.length < 5) { toast('Please write a bit more.'); return; }
-    if (message.length > 4000) { toast('Too long — under 4000 characters please.'); return; }
+    if (!message) { setFbStatus('Please write a message.', 'error'); return; }
+    if (message.length > 4000) { setFbStatus('Too long — under 4000 characters please.', 'error'); return; }
     const btn = $('#tgg-fb-submit');
     btn.disabled = true;
+    setFbStatus('Sending…');
     try {
       const result = await SB.rpc('submit_feedback', {
         p_player_id:    state.playerId,
@@ -212,20 +222,21 @@
         p_page_url:     location.href
       });
       if (result && result.ok) {
-        toast('Thanks — feedback received.');
-        closeFeedbackModal();
+        setFbStatus('Thanks — feedback received.', 'good');
+        toast('Feedback sent.');
+        setTimeout(closeFeedbackModal, 900);
       } else {
         const reason = result && result.reason;
         const msg =
-          reason === 'too_short'    ? 'Please write a bit more.' :
+          reason === 'too_short'    ? 'Please write a message.' :
           reason === 'too_long'     ? 'Too long — under 4000 characters please.' :
-          reason === 'rate_limited' ? 'Too many submissions — try again later.' :
+          reason === 'rate_limited' ? 'Too many submissions — try again in a bit.' :
           'Could not send feedback.';
-        toast(msg);
+        setFbStatus(msg, 'error');
       }
     } catch (err) {
       console.error('[tech-grid] feedback failed', err);
-      toast('Could not send feedback.');
+      setFbStatus('Could not send feedback. ' + (err && err.message ? err.message.slice(0, 120) : ''), 'error');
     } finally {
       btn.disabled = false;
     }
